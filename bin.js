@@ -1,13 +1,13 @@
 /* -*- mode: javascript; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-// 
+//
 // Dalliance Genome Explorer
 // (c) Thomas Down 2006-2011
 //
 // bin.js general binary data support
 //
 
-define(function(require, exports, module) {
+define(["sha1"], function(sha1) {
 "use strict";
 
 // Copied from utils.js so that utils.js is no longer a requirement. Can replace with $.extend() or _.extend()
@@ -19,10 +19,8 @@ function shallowCopy(o) {
     return n;
 }
 
-if (typeof(require) !== 'undefined') {
-    var sha1 = require('./sha1');
-    var b64_sha1 = sha1.b64_sha1;
-}
+var b64_sha1 = sha1.b64_sha1;
+
 
 function BlobFetchable(b) {
     this.blob = b;
@@ -159,7 +157,7 @@ URLFetchable.prototype.salted = function() {
 
 URLFetchable.prototype.fetch = function(callback, opts) {
     var thisB = this;
- 
+
     opts = opts || {};
     var attempt = opts.attempt || 1;
     var truncatedLength = opts.truncatedLength;
@@ -244,23 +242,6 @@ function bstringToBuffer(result) {
     return ba.buffer;
 }
 
-// Read from Uint8Array
-
-(function(global) {
-    var convertBuffer = new ArrayBuffer(8);
-    var ba = new Uint8Array(convertBuffer);
-    var fa = new Float32Array(convertBuffer);
-
-
-    global.readFloat = function(buf, offset) {
-        ba[0] = buf[offset];
-        ba[1] = buf[offset+1];
-        ba[2] = buf[offset+2];
-        ba[3] = buf[offset+3];
-        return fa[0];
-    };
- }(this));
-
 function readInt64(ba, offset) {
     return (ba[offset + 7] << 24) | (ba[offset + 6] << 16) | (ba[offset + 5] << 8) | (ba[offset + 4]);
 }
@@ -281,10 +262,7 @@ function readIntBE(ba, offset) {
     return (ba[offset] << 24) | (ba[offset + 1] << 16) | (ba[offset + 2] << 8) | (ba[offset + 3]);
 }
 
-// Exports if we are being used as a module
-
-if (typeof(module) !== 'undefined') {
-    module.exports = {
+return {
         BlobFetchable: BlobFetchable,
         URLFetchable: URLFetchable,
 
@@ -292,8 +270,7 @@ if (typeof(module) !== 'undefined') {
         readIntBE: readIntBE,
         readInt64: readInt64,
         readShort: readShort,
-        readByte: readByte,
-        readFloat: this.readFloat
-    }
-}
+        readByte: readByte
+};
+
 });

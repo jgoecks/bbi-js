@@ -6,7 +6,8 @@
  * Distributed under the BSD License
  * See http://pajhome.org.uk/crypt/md5 for details.
  */
-define(function(require, exports, module) {
+
+define([], function() {
  "use strict";
 
 /*
@@ -331,10 +332,8 @@ function bit_rol(num, cnt)
   return (num << cnt) | (num >>> (32 - cnt));
 }
 
-if (typeof(module) !== 'undefined') {
-  module.exports = {
+return {
     b64_sha1: b64_sha1,
     hex_sha1: hex_sha1
   };
-}
 });

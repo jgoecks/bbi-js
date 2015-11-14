@@ -23,7 +23,9 @@
                     $('body').append("<h3>Information about test.bigwig" + "</h3>");
                     $('body').append("Version: " + bb.version + "<br>");
                     $('body').append("Number of Zoom Levels: " + bb.numZoomLevels + "<br>");
-                    bb.readWigData(12, 25357722, 25403865, function(data){
+                    //bb.readWigData(12, 25357722, 25403865, function(data){
+                    bb.readWigData(1, 0, 249250620, function(data){
+                      console.log(data.length, data);
                       $('body').append("Length: "+data.length+"<br>");
                       $('body').append("readWigData: ");
                       $('body').append($.map(data, function(obj){return JSON.stringify(obj.score)}).join(' '));

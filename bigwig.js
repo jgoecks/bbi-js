@@ -7,8 +7,7 @@
 // bigwig.js: indexed binary WIG (and BED) files
 //
 
-define(function(require, exports, module) {
-
+define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
   "use strict";
 
   // Copied from das.js so that das.js no longer a requirement
@@ -32,19 +31,14 @@ define(function(require, exports, module) {
   // TODO: Is salting useful/necessary? If not, can replace URLFetchable and then remove bin.js and sha1.js
   // requirements.
 
-  if (typeof(require) !== 'undefined') {
-      var spans = require('./spans');
-      var Range = spans.Range;
-      var union = spans.union;
-      var intersection = spans.intersection;
-      
-      var bin = require('./bin');
-      var readInt = bin.readInt;
+  var Range = spans.Range;
+  var union = spans.union;
+  var intersection = spans.intersection;
 
-      var jszlib = require('./jszlib');
-      var jszlib_inflate_buffer = jszlib.inflateBuffer;
-      var arrayCopy = jszlib.arrayCopy;
-  }
+  var readInt = bin.readInt;
+
+  var jszlib_inflate_buffer = jszlib.inflateBuffer;
+  var arrayCopy = jszlib.arrayCopy;
 
   var BIG_WIG_MAGIC = 0x888FFC26;
   var BIG_WIG_MAGIC_BE = 0x26FC8F88;
@@ -1098,11 +1092,9 @@ define(function(require, exports, module) {
       });
   }
 
-  if (typeof(module) !== 'undefined') {
-      module.exports = {
+  return {
           makeBwg: makeBwg,
           BIG_BED_MAGIC: BIG_BED_MAGIC,
           BIG_WIG_MAGIC: BIG_WIG_MAGIC
-      }
-  }
+  };
 });
