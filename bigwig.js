@@ -62,7 +62,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   /**
    * Read binary data from a URL using HTTP Range header. Requires jQuery and ajax-native plugin.
    */
-  function read(url, start, size, callback, callbackOptions, errorcallback) {
+  function read(url, start, size) {
       // Taken from bin.js:
       // This may be necessary for Safari:
       //   if ((isSafari || this.opts.salt) && url.indexOf('?') < 0) {
