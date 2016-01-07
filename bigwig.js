@@ -35,9 +35,6 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       return (ba[offset + 3] << 24) | (ba[offset + 2] << 16) | (ba[offset + 1] << 8) | (ba[offset]);
   }
 
-  // TODO: Is salting useful/necessary? If not, can replace URLFetchable and then remove bin.js and sha1.js
-  // requirements.
-
   var Range = spans.Range;
   var union = spans.union;
   var intersection = spans.intersection;
@@ -71,30 +68,29 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       //   if ((isSafari || this.opts.salt) && url.indexOf('?') < 0) {
       //       url = url + '?salt=' + b64_sha1('' + Date.now() + ',' + (++seed));
       //   }
-      // TODO: add timeout to request.
+
+      var promise = $.Deferred();
 
       var chunkSizeLimit = Math.pow(10, 6); // 1 MB
       if(size > chunkSizeLimit) {
           // TODO: raise error.
       }
-      else {
-          // Read data from remote file.
-          return $.ajax({
+
+      // Read data from remote file.
+      return $.ajax({
               type: 'GET',
               dataType: 'native',
               url: url,
+              // Potential timeout on first request to catch mixed-content errors on Chromium.
+              timeout: 5000,
               beforeSend: function(xhrObj) {
                   // (size - 1) because range is inclusive.
                   xhrObj.setRequestHeader("Range", "bytes=" + start + "-" + (start + (size - 1)));
               },
               xhrFields: {
                   responseType: 'arraybuffer'
-              },
-              success: function(data) {
-                  callback(data);
               }
           });
-      }
   }
 
   function bwg_readOffset(ba, o) {
@@ -115,7 +111,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       var eb = (udo - this.chromTreeOffset) & 3;
       udo = udo + 4 - eb;
 
-      read(this.url, this.chromTreeOffset, udo - this.chromTreeOffset, function(bpt) {
+      $.when(read(this.url, this.chromTreeOffset, udo - this.chromTreeOffset)).then(function(bpt) {
           var ba = new Uint8Array(bpt);
           var sa = new Int16Array(bpt);
           var la = new Int32Array(bpt);
@@ -186,7 +182,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   BigWigView.prototype.readWigDataById = function(chr, min, max, callback) {
       var thisB = this;
       if (!this.cirHeader) {
-          read(this.bwg.url, this.cirTreeOffset, 48, function(result) {
+          $.when(read(thisB.bwg.url, this.cirTreeOffset, 48)).then(function(result) {
               thisB.cirHeader = result;
               var la = new Int32Array(thisB.cirHeader);
               thisB.cirBlockSize = la[1];
@@ -235,7 +231,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
 
       var cirFobStartFetch = function(offset, fr, level, attempts) {
           var length = fr.max() - fr.min();
-          read(thisB.bwg.url, fr.min(), fr.max() - fr.min(), function(resultBuffer) {
+          $.when(read(thisB.bwg.url, fr.min(), fr.max() - fr.min())).then(function(resultBuffer) {
               for (var i = 0; i < offset.length; ++i) {
                   if (fr.contains(offset[i])) {
                       cirFobRecur2(resultBuffer, offset[i] - fr.min(), level);
@@ -354,7 +350,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                           ++bi;
                       }
 
-                      read(thisB.bwg.url, fetchStart, fetchSize, function(result) {
+                      $.when(read(thisB.bwg.url, fetchStart, fetchSize)).then(function(result) {
                           var offset = 0;
                           var bi = 0;
                           while (offset < fetchSize) {
@@ -799,7 +795,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   function makeBwg(url, callback) {
       var bwg = new BigWig();
       bwg.url = url;
-      read(bwg.url, 0, 512, function(result) {
+      $.when(read(bwg.url, 0, 512)).then(function(result) {
           if (!result) {
               return callback(null, "Couldn't fetch file");
           }
@@ -847,9 +843,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                   return callback(bwg);
               });
           });
-      }, {timeout: 5000});    // Potential timeout on first request to catch mixed-content errors on
-                             // Chromium.
-        //function() { console.log("Error making bigwig."); });
+      });
   }
 
 
