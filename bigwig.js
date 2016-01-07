@@ -1,13 +1,15 @@
 /* -*- mode: javascript; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 //
+// Modified from:
+//
 // Dalliance Genome Explorer
 // (c) Thomas Down 2006-2010
 //
 // bigwig.js: indexed binary WIG (and BED) files
 //
 
-define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
+define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, jszlib) {
   "use strict";
 
   // Copied from das.js so that das.js no longer a requirement
@@ -28,14 +30,17 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
       return n;
   }
 
+  // Copied from bin.js
+  function readInt(ba, offset) {
+      return (ba[offset + 3] << 24) | (ba[offset + 2] << 16) | (ba[offset + 1] << 8) | (ba[offset]);
+  }
+
   // TODO: Is salting useful/necessary? If not, can replace URLFetchable and then remove bin.js and sha1.js
   // requirements.
 
   var Range = spans.Range;
   var union = spans.union;
   var intersection = spans.intersection;
-
-  var readInt = bin.readInt;
 
   var jszlib_inflate_buffer = jszlib.inflateBuffer;
   var arrayCopy = jszlib.arrayCopy;
@@ -57,6 +62,41 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
 
   var BED_COLOR_REGEXP = new RegExp("^[0-9]+,[0-9]+,[0-9]+");
 
+  /**
+   * Read binary data from a URL using HTTP Range header. Requires jQuery and ajax-native plugin.
+   */
+  function read(url, start, size, callback, callbackOptions, errorcallback) {
+      // Taken from bin.js:
+      // This may be necessary for Safari:
+      //   if ((isSafari || this.opts.salt) && url.indexOf('?') < 0) {
+      //       url = url + '?salt=' + b64_sha1('' + Date.now() + ',' + (++seed));
+      //   }
+      // TODO: add timeout to request.
+
+      var chunkSizeLimit = Math.pow(10, 6); // 1 MB
+      if(size > chunkSizeLimit) {
+          // TODO: raise error.
+      }
+      else {
+          // Read data from remote file.
+          return $.ajax({
+              type: 'GET',
+              dataType: 'native',
+              url: url,
+              beforeSend: function(xhrObj) {
+                  // (size - 1) because range is inclusive.
+                  xhrObj.setRequestHeader("Range", "bytes=" + start + "-" + (start + (size - 1)));
+              },
+              xhrFields: {
+                  responseType: 'arraybuffer'
+              },
+              success: function(data) {
+                  callback(data);
+              }
+          });
+      }
+  }
+
   function bwg_readOffset(ba, o) {
       var offset = ba[o] + ba[o+1]*M1 + ba[o+2]*M2 + ba[o+3]*M3 + ba[o+4]*M4;
       return offset;
@@ -75,7 +115,7 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
       var eb = (udo - this.chromTreeOffset) & 3;
       udo = udo + 4 - eb;
 
-      this.data.slice(this.chromTreeOffset, udo - this.chromTreeOffset).fetch(function(bpt) {
+      read(this.url, this.chromTreeOffset, udo - this.chromTreeOffset, function(bpt) {
           var ba = new Uint8Array(bpt);
           var sa = new Int16Array(bpt);
           var la = new Int32Array(bpt);
@@ -146,7 +186,7 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
   BigWigView.prototype.readWigDataById = function(chr, min, max, callback) {
       var thisB = this;
       if (!this.cirHeader) {
-          this.bwg.data.slice(this.cirTreeOffset, 48).fetch(function(result) {
+          read(this.bwg.url, this.cirTreeOffset, 48, function(result) {
               thisB.cirHeader = result;
               var la = new Int32Array(thisB.cirHeader);
               thisB.cirBlockSize = la[1];
@@ -195,7 +235,7 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
 
       var cirFobStartFetch = function(offset, fr, level, attempts) {
           var length = fr.max() - fr.min();
-          thisB.bwg.data.slice(fr.min(), fr.max() - fr.min()).fetch(function(resultBuffer) {
+          read(thisB.bwg.url, fr.min(), fr.max() - fr.min(), function(resultBuffer) {
               for (var i = 0; i < offset.length; ++i) {
                   if (fr.contains(offset[i])) {
                       cirFobRecur2(resultBuffer, offset[i] - fr.min(), level);
@@ -314,7 +354,7 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
                           ++bi;
                       }
 
-                      thisB.bwg.data.slice(fetchStart, fetchSize).fetch(function(result) {
+                      read(thisB.bwg.url, fetchStart, fetchSize, function(result) {
                           var offset = 0;
                           var bi = 0;
                           while (offset < fetchSize) {
@@ -756,11 +796,10 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
       return zh.view;
   }
 
-  function makeBwg(data, callback, name) {
+  function makeBwg(url, callback) {
       var bwg = new BigWig();
-      bwg.data = data;
-      bwg.name = name;
-      bwg.data.slice(0, 512).salted().fetch(function(result) {
+      bwg.url = url;
+      read(bwg.url, 0, 512, function(result) {
           if (!result) {
               return callback(null, "Couldn't fetch file");
           }
@@ -809,7 +848,8 @@ define(["spans", "bin", "jszlib"], function(spans, bin, jszlib) {
               });
           });
       }, {timeout: 5000});    // Potential timeout on first request to catch mixed-content errors on
-                              // Chromium.
+                             // Chromium.
+        //function() { console.log("Error making bigwig."); });
   }
 
 
