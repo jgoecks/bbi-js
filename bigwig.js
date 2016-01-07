@@ -68,9 +68,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       //   if ((isSafari || this.opts.salt) && url.indexOf('?') < 0) {
       //       url = url + '?salt=' + b64_sha1('' + Date.now() + ',' + (++seed));
       //   }
-
-      var promise = $.Deferred();
-
+      
       var chunkSizeLimit = Math.pow(10, 6); // 1 MB
       if(size > chunkSizeLimit) {
           // TODO: raise error.
