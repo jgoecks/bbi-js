@@ -68,7 +68,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       //   if ((isSafari || this.opts.salt) && url.indexOf('?') < 0) {
       //       url = url + '?salt=' + b64_sha1('' + Date.now() + ',' + (++seed));
       //   }
-      
+
       var chunkSizeLimit = Math.pow(10, 6); // 1 MB
       if(size > chunkSizeLimit) {
           // TODO: raise error.
@@ -790,12 +790,13 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       return zh.view;
   }
 
-  function makeBwg(url, callback) {
-      var bwg = new BigWig();
+  function makeBwg(url) {
+      var promise = $.Deferred(),
+          bwg = new BigWig();
       bwg.url = url;
       $.when(read(bwg.url, 0, 512)).then(function(result) {
           if (!result) {
-              return callback(null, "Couldn't fetch file");
+              return promise.resolve(null, "Couldn't fetch file");
           }
 
           var header = result;
@@ -808,10 +809,10 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
           } else if (magic == BIG_BED_MAGIC) {
               bwg.type = 'bigbed';
           } else if (magic == BIG_WIG_MAGIC_BE || magic == BIG_BED_MAGIC_BE) {
-              return callback(null, "Currently don't support big-endian BBI files");
+              return promise.resolve(null, "Currently don't support big-endian BBI files");
 
           } else {
-              return callback(null, "Not a supported format, magic=0x" + magic.toString(16));
+              return promise.resolve(null, "Not a supported format, magic=0x" + magic.toString(16));
 
           }
 
@@ -838,10 +839,12 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
           bwg.readChromTree(function() {
               bwg.getAutoSQL(function(as) {
                   bwg.schema = as;
-                  return callback(bwg);
+                  return promise.resolve(bwg);
               });
           });
       });
+
+      return promise;
   }
 
 
@@ -1125,8 +1128,6 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   }
 
   return {
-          makeBwg: makeBwg,
-          BIG_BED_MAGIC: BIG_BED_MAGIC,
-          BIG_WIG_MAGIC: BIG_WIG_MAGIC
+      makeBwg: makeBwg
   };
 });
