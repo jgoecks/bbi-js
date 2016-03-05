@@ -766,8 +766,29 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       cirFobRecur([thisB.cirTreeOffset + 48], 1);
   }
 
+  /**
+   * Automatically choose a zoom level and return data from that level.
+   */
   BigWig.prototype.readWigData = function(chrName, min, max, callback) {
-      this.getUnzoomedView().readWigData(chrName, min, max, callback);
+      var range = max - min,
+          view,
+          maxDataPoints = 2000;
+      if (range <= maxDataPoints) {
+          // No zooming needed.
+          view = this.getUnzoomedView();
+      }
+      else {
+          // Find reasonable zoom level. Reduction is the # of bases represented
+          // by each data point at that level.
+          for (var i = 0; i < this.zoomLevels.length; i++) {
+              if (range/this.zoomLevels[i].reduction < maxDataPoints) {
+                  view = this.getZoomedView(i);
+                  break;
+              }
+          }
+      }
+
+      view.readWigData(chrName, min, max, callback);
   }
 
   BigWig.prototype.getUnzoomedView = function() {

@@ -25,8 +25,8 @@
         }
     });
 
-    require(['bigwig'], function(bigwig) {
-        bbURI = './test.bigwig';
+    require(['bigwig', 'd3.min', 'vega'], function(bigwig, d3, vega) {
+        var bbURI = 'RMNISTHS_30xdownsample.bigwig'; //'./miapaca2_rnaseq.bigwig';
         var cb, err;
         $.when(bigwig.makeBwg(bbURI)).then(function(_bb, _err) {
             bb = _bb;
@@ -36,13 +36,66 @@
             $('body').append("<h3>Information about test.bigwig" + "</h3>");
             $('body').append("Version: " + bb.version + "<br>");
             $('body').append("Number of Zoom Levels: " + bb.numZoomLevels + "<br>");
-            //bb.readWigData(12, 25357722, 25403865, function(data){
-            bb.readWigData(1, 0, 249250620, function(data){
-              console.log(data.length, data);
-              $('body').append("Length: "+data.length+"<br>");
-              $('body').append("readWigData: ");
-              $('body').append($.map(data, function(obj){return JSON.stringify(obj.score)}).join(' '));
-              $('body').append("<br>");
+            // $.each([0,1,2,3,4,5,6,7,8,9], function(zl) {
+            //     bb.getZoomedView(zl).readWigData(1, 0, 249250620, function(data) {
+            //         console.log(zl, data.length);
+            //     });
+            // });
+            // bb.readWigData(1, 0, 249250620, function(data) {
+            //     console.log("unzoomed", data.length);
+            // });
+
+            // //bb.getZoomedView(5).readWigData(1, 0, 249250620, function(data) {
+            // //bb.getUnzoomedView().readWigData(1, 0, 249250620, function(data) {
+            bb.readWigData(1, 0, 249250620, function(data) {
+                console.log(data.length);
+                //console.log(data.length, data);
+                $('body').append("Length: "+data.length+"<br>");
+                $('body').append("readWigData: ");
+                $('body').append($.map(data, function(obj){return JSON.stringify(obj.score)}).join(' '));
+                $('body').append("<br>");
+
+                // Convert features to x,y coordinates.
+                var max = 0, max_pos = 0;
+                converted_data = $.map(data, function(interval) {
+                    if (interval.score > max) {
+                        max = interval.score;
+                        max_pos = interval;
+                    }
+                    if (interval.min === interval.max) {
+                        //console.log(interval.min, interval.score);
+                        return {
+                            chrompos: interval.min,
+                            score: interval.score
+                        };
+                    }
+                    else {
+                        // console.log(interval.min, interval.score);
+                        // console.log(interval.max, interval.score);
+                        return [
+                            {
+                                chrompos: interval.min,
+                                score: interval.score
+                            },
+                            {
+                                chrompos: interval.max,
+                                score: interval.score
+                            }
+                        ];
+                    }
+                });
+
+                $.getJSON("./line-chart.json", function(viz_spec) {
+                    viz_spec.data = [
+                        {
+                            "name": "table",
+                            "values": converted_data
+                        }
+                    ];
+                    vega.parse.spec(viz_spec, function(chart) {
+                        chart({el:"#vis"}).update();
+                    });
+                });
             });
         });
     });

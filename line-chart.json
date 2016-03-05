@@ -1,0 +1,52 @@
+{
+  "width": 1000,
+  "height": 50,
+  "padding": {"top": 10, "left": 30, "bottom": 20, "right": 10},
+
+  "data": [],
+
+  "signals": [
+    {
+      "name": "tooltip",
+      "init": {},
+      "streams": [
+        {"type": "rect:mouseover", "expr": "datum"},
+        {"type": "rect:mouseout", "expr": "{}"}
+      ]
+    }
+  ],
+
+  "predicates": [
+    {
+      "name": "tooltip", "type": "==",
+      "operands": [{"signal": "tooltip._id"}, {"arg": "id"}]
+    }
+  ],
+
+  "scales": [
+    { "name": "xscale", "range": "width",
+      "domain": {"data": "table", "field": "chrompos"} },
+    { "name": "yscale", "range": "height", "nice": true,
+      "domain": [0, 150] }
+  ],
+
+  "axes": [
+    { "type": "x", "scale": "xscale", "format": "s", "ticks": 5 },
+    { "type": "y", "scale": "yscale" }
+  ],
+
+  "marks": [
+    {
+      "type": "line",
+      "from": {"data":"table"},
+      "properties": {
+          "update": {
+               "x": {"scale": "xscale","field": "chrompos"},
+               "y": {"scale": "yscale","field": "score"},
+               "strokeWidth": {"value": 2},
+               "stroke": {"value": "#4682b4"}
+           }
+       }
+    }
+  ]
+}
