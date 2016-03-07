@@ -99,6 +99,10 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   function BigWig() {
   }
 
+  // Maximum number of data points to return when reading a bigwig. This is used
+  // to choose the appropriate level. One data point ~= 25-65 bytes.
+  BigWig.MAX_DATA_POINTS = 1000;
+
   BigWig.prototype.readChromTree = function(callback) {
       var thisB = this;
       this.chromsToIDs = {};
@@ -771,9 +775,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
    */
   BigWig.prototype.readWigData = function(chrName, min, max, callback) {
       var range = max - min,
-          view,
-          maxDataPoints = 2000;
-      if (range <= maxDataPoints) {
+          view;
+      if (range <= BigWig.MAX_DATA_POINTS) {
           // No zooming needed.
           view = this.getUnzoomedView();
       }
@@ -781,7 +784,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
           // Find reasonable zoom level. Reduction is the # of bases represented
           // by each data point at that level.
           for (var i = 0; i < this.zoomLevels.length; i++) {
-              if (range/this.zoomLevels[i].reduction < maxDataPoints) {
+              if (range/this.zoomLevels[i].reduction < BigWig.MAX_DATA_POINTS) {
                   view = this.getZoomedView(i);
                   break;
               }
