@@ -103,7 +103,10 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   // to choose the appropriate level. One data point ~= 25-65 bytes.
   BigWig.MAX_DATA_POINTS = 1000;
 
-  BigWig.prototype.readChromTree = function(callback) {
+  /**
+   * Read the chromosome B+ tree header.
+   */
+  BigWig.prototype.readChromTree = function() {
       var thisB = this;
       this.chromsToIDs = {};
       this.idsToChroms = {};
@@ -113,7 +116,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       var eb = (udo - this.chromTreeOffset) & 3;
       udo = udo + 4 - eb;
 
-      $.when(read(this.url, this.chromTreeOffset, udo - this.chromTreeOffset)).then(function(bpt) {
+      // Read and parse the chrom tree, return the promise so that subsequent actions can be taken.
+      return $.when(read(this.url, this.chromTreeOffset, udo - this.chromTreeOffset)).then(function(bpt) {
           var ba = new Uint8Array(bpt);
           var sa = new Int16Array(bpt);
           var la = new Int32Array(bpt);
@@ -157,8 +161,6 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
               }
           };
           bptReadNode(rootNodeOffset);
-
-          callback(thisB);
       });
   }
 
@@ -183,6 +185,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
 
   BigWigView.prototype.readWigDataById = function(chr, min, max, callback) {
       var thisB = this;
+
+      // Read the R-tree index header and then read data again.
       if (!this.cirHeader) {
           $.when(read(thisB.bwg.url, this.cirTreeOffset, 48)).then(function(result) {
               thisB.cirHeader = result;
@@ -818,6 +822,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       var promise = $.Deferred(),
           bwg = new BigWig();
       bwg.url = url;
+
+      // Read and parse bigwig header, including chrom tree.
       $.when(read(bwg.url, 0, 512)).then(function(result) {
           if (!result) {
               return promise.resolve(null, "Couldn't fetch file");
@@ -860,7 +866,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
               bwg.zoomLevels.push({reduction: zlReduction, dataOffset: zlData, indexOffset: zlIndex});
           }
 
-          bwg.readChromTree(function() {
+          $.when(bwg.readChromTree()).then(function() {
               bwg.getAutoSQL(function(as) {
                   bwg.schema = as;
                   return promise.resolve(bwg);
