@@ -173,18 +173,22 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
 
 
 
-    BigWigView.prototype.readWigData = function(chrName, min, max, callback) {
-        var chr = this.bwg.chromsToIDs[chrName];
+    BigWigView.prototype.readWigData = function(chrName, min, max) {
+        var chr = this.bwg.chromsToIDs[chrName],
+            rval;
         if (chr === undefined) {
             // Not an error because some .bwgs won't have data for all chromosomes.
-            return callback([]);
+            rval = [];
         } else {
-            this.readWigDataById(chr, min, max, callback);
+            rval = this.readWigDataById(chr, min, max);
         }
-    }
 
-    BigWigView.prototype.readWigDataById = function(chr, min, max, callback) {
-        var thisB = this;
+        return rval;
+    };
+
+    BigWigView.prototype.readWigDataById = function(chr, min, max) {
+        var thisB = this,
+            promise = $.Deferred();
 
         // Read the R-tree index header and then read data again.
         if (!this.cirHeader) {
@@ -192,9 +196,11 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                 thisB.cirHeader = result;
                 var la = new Int32Array(thisB.cirHeader);
                 thisB.cirBlockSize = la[1];
-                thisB.readWigDataById(chr, min, max, callback);
+                $.when(thisB.readWigDataById(chr, min, max)).then(function(result) {
+                    promise.resolve(result);
+                });
             });
-            return;
+            return promise;
         }
 
         var blocksToFetch = [];
@@ -215,8 +221,10 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
             if (offset.length == 1 && offset[0] - thisB.cirTreeOffset == 48 && thisB.cachedCirRoot) {
                 cirFobRecur2(thisB.cachedCirRoot, 0, level);
                 --outstanding;
-                if (outstanding == 0) {
-                    thisB.fetchFeatures(filter, blocksToFetch, callback);
+                if (outstanding === 0) {
+                    $.when(thisB.fetchFeatures(filter, blocksToFetch)).then(function(result) {
+                        promise.resolve(result);
+                    });
                 }
                 return;
             }
@@ -233,7 +241,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                 var fr = fetchRanges[r];
                 cirFobStartFetch(offset, fr, level);
             }
-        }
+        };
 
         var cirFobStartFetch = function(offset, fr, level, attempts) {
             var length = fr.max() - fr.min();
@@ -242,17 +250,19 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                     if (fr.contains(offset[i])) {
                         cirFobRecur2(resultBuffer, offset[i] - fr.min(), level);
 
-                        if (offset[i] - thisB.cirTreeOffset == 48 && offset[i] - fr.min() == 0)
-                        thisB.cachedCirRoot = resultBuffer;
+                        if (offset[i] - thisB.cirTreeOffset == 48 && offset[i] - fr.min() === 0)
+                            thisB.cachedCirRoot = resultBuffer;
 
                         --outstanding;
-                        if (outstanding == 0) {
-                            thisB.fetchFeatures(filter, blocksToFetch, callback);
+                        if (outstanding === 0) {
+                            $.when(thisB.fetchFeatures(filter, blocksToFetch)).then(function(result) {
+                                promise.resolve(result);
+                            });
                         }
                     }
                 }
             });
-        }
+        };
 
         var cirFobRecur2 = function(cirBlockData, offset, level) {
             var ba = new Uint8Array(cirBlockData);
@@ -263,7 +273,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
             var cnt = sa[offset/2 + 1];
             offset += 4;
 
-            if (isLeaf != 0) {
+            if (isLeaf !== 0) {
                 for (var i = 0; i < cnt; ++i) {
                     var lo = offset/4;
                     var startChrom = la[lo];
@@ -302,18 +312,22 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
         };
 
         cirFobRecur([thisB.cirTreeOffset + 48], 1);
+        return promise;
     }
 
-
-    BigWigView.prototype.fetchFeatures = function(filter, blocksToFetch, callback) {
-        var thisB = this;
+    /**
+     * Fetch data for a set of blocks. Returns a promise that resolves to fetched data.
+     */
+    BigWigView.prototype.fetchFeatures = function(filter, blocksToFetch) {
+        var thisB = this,
+            promise = $.Deferred();
 
         blocksToFetch.sort(function(b0, b1) {
             return (b0.offset|0) - (b1.offset|0);
         });
 
-        if (blocksToFetch.length == 0) {
-            callback([]);
+        if (blocksToFetch.length === 0) {
+            return [];
         } else {
             var features = [];
             var createFeature = function(chr, fmin, fmax, opts) {
@@ -335,19 +349,21 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                 features.push(f);
             };
 
+            // Recursive function to read blocks of data.
             var tramp = function() {
-                if (blocksToFetch.length == 0) {
+                if (blocksToFetch.length === 0) {
                     var afterBWG = Date.now();
                     // dlog('BWG fetch took ' + (afterBWG - beforeBWG) + 'ms');
-                    callback(features);
-                    return;  // just in case...
-                } else {
+                    return promise.resolve(features);
+                }
+                else {
                     var block = blocksToFetch[0];
                     if (block.data) {
                         thisB.parseFeatures(block.data, createFeature, filter);
                         blocksToFetch.splice(0, 1);
                         tramp();
-                    } else {
+                    }
+                    else {
                         var fetchStart = block.offset;
                         var fetchSize = block.size;
                         var bi = 1;
@@ -379,9 +395,11 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                         });
                     }
                 }
-            }
+            };
             tramp();
         }
+
+        return promise;
     }
 
     BigWigView.prototype.parseFeatures = function(data, createFeature, filter) {
@@ -778,7 +796,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
     /**
     * Automatically choose a zoom level and return data from that level.
     */
-    BigWig.prototype.readWigData = function(chrName, min, max, callback) {
+    BigWig.prototype.readWigData = function(chrName, min, max) {
         var range = max - min,
         view;
         // If no zooming needed or available (common in bigbed), use unzoomed view.
@@ -796,7 +814,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
             }
         }
 
-        view.readWigData(chrName, min, max, callback);
+        return view.readWigData(chrName, min, max);
     }
 
     BigWig.prototype.getUnzoomedView = function() {
