@@ -509,6 +509,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                   if (dfc < 12) {
                       createFeature(chromId, start + 1, end, featureOpts);
                   } else {
+                      // TODO: add block starts, sizes, thick start, thick end to feature.
                       var thickStart = bedColumns[3]|0;
                       var thickEnd   = bedColumns[4]|0;
                       var blockCount = bedColumns[6]|0;
@@ -780,8 +781,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
   BigWig.prototype.readWigData = function(chrName, min, max, callback) {
       var range = max - min,
           view;
-      if (range <= BigWig.MAX_DATA_POINTS) {
-          // No zooming needed.
+      // If no zooming needed or available (common in bigbed), use unzoomed view.
+      if (range <= BigWig.MAX_DATA_POINTS || this.zoomLevels.length === 0) {
           view = this.getUnzoomedView();
       }
       else {
@@ -981,8 +982,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
       if (!this.asOffset)
           return callback(null);
 
-
-      this.data.slice(this.asOffset, 2048).fetch(function(result) {
+      $.when(read(this.url, this.asOffset, 2048)).then(function(result) {
           var ba = new Uint8Array(result);
           var s = '';
           for (var i = 0; i < ba.length; ++i) {
