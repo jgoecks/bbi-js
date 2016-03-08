@@ -1,5 +1,5 @@
-/* -*- mode: javascript; c-basic-offset: 4; indent-tabs-mode: nil -*- */
-
+//
+// Author: Jeremy Goecks
 //
 // Modified from:
 //
@@ -9,10 +9,15 @@
 // bigwig.js: indexed binary WIG (and BED) files
 //
 
+// Requirements:
+//  * jquery and ajax-native plugin for reading binary data, jquery for promises
+//  * spans for working working with genomic intervals
+//  * jszlib for decompression.
 define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, jszlib) {
     "use strict";
 
-    // Copied from das.js so that das.js no longer a requirement
+    // -- Copied from das.js --
+
     function DASFeature() {
     }
 
@@ -21,20 +26,17 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
         this.id = id;
     }
 
-    // Copied from utils so that utils.js no longer a requirement. Can replace with $.extend() or _.extend()
-    function shallowCopy(o) {
-        var n = {};
-        for (var k in o) {
-            n[k] = o[k];
-        }
-        return n;
-    }
+    // -- End copy --
 
-    // Copied from bin.js
+    // -- Copied from bin.js --
+
     function readInt(ba, offset) {
         return (ba[offset + 3] << 24) | (ba[offset + 2] << 16) | (ba[offset + 1] << 8) | (ba[offset]);
     }
 
+    // -- End copy --
+
+    // Some globals.
     var Range = spans.Range;
     var union = spans.union;
     var intersection = spans.intersection;
@@ -60,8 +62,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
     var BED_COLOR_REGEXP = new RegExp("^[0-9]+,[0-9]+,[0-9]+");
 
     /**
-    * Read binary data from a URL using HTTP Range header. Requires jQuery and ajax-native plugin.
-    */
+     * Read binary data from a URL using HTTP Range header. Requires jQuery and ajax-native plugin.
+     */
     function read(url, start, size) {
         // Taken from bin.js:
         // This may be necessary for Safari:
@@ -133,7 +135,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                 var cnt = sa[(offset/2) + 1];
                 offset += 4;
                 for (var n = 0; n < cnt; ++n) {
-                    if (nodeType == 0) {
+                    if (nodeType === 0) {
                         offset += keySize;
                         var childOffset = bwg_readOffset(ba, offset);
                         offset += 8;
@@ -143,7 +145,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                         var key = '';
                         for (var ki = 0; ki < keySize; ++ki) {
                             var charCode = ba[offset++];
-                            if (charCode != 0) {
+                            if (charCode !== 0) {
                                 key += String.fromCharCode(charCode);
                             }
                         }
@@ -152,7 +154,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                         offset += 8;
 
                         thisB.chromsToIDs[key] = chromId;
-                        if (key.indexOf('chr') == 0) {
+                        if (key.indexOf('chr') === 0) {
                             thisB.chromsToIDs[key.substr(3)] = chromId;
                         }
                         thisB.idsToChroms[chromId] = key;
@@ -210,7 +212,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
 
         var filter = function(chromId, fmin, fmax, toks) {
             return ((chr < 0 || chromId == chr) && fmin <= max && fmax >= min);
-        }
+        };
 
         var cirFobRecur = function(offset, level) {
             if (thisB.bwg.instrument)
@@ -313,7 +315,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
 
         cirFobRecur([thisB.cirTreeOffset + 48], 1);
         return promise;
-    }
+    };
 
     /**
      * Fetch data for a set of blocks. Returns a promise that resolves to fetched data.
@@ -400,7 +402,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
         }
 
         return promise;
-    }
+    };
 
     BigWigView.prototype.parseFeatures = function(data, createFeature, filter) {
         var ba = new Uint8Array(data);
@@ -429,7 +431,8 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                     createFeature(chromId, start + 1, end, summaryOpts);
                 }
             }
-        } else if (this.bwg.type == 'bigwig') {
+        }
+        else if (this.bwg.type == 'bigwig') {
             var sa = new Int16Array(data);
             var la = new Int32Array(data);
             var fa = new Float32Array(data);
@@ -563,7 +566,7 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
                             if (featureOpts.geneName2)
                             geneName = featureOpts.geneName2;
 
-                            var gg = shallowCopy(grp);
+                            var gg = $.extend({}, grp);
                             gg.id = geneId;
                             gg.label = geneName;
                             gg.type = 'gene';
@@ -837,6 +840,10 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
         return zh.view;
     }
 
+    /**
+     * Create a BigWig object using a URL to a bigwig/bigbed file. Returns a promise
+     * that resolves to the object when it's available.
+     */
     function makeBwg(url) {
         var promise = $.Deferred(),
         bwg = new BigWig();
@@ -1017,165 +1024,165 @@ define(["jquery", "spans", "jszlib", "jquery-ajax-native"], function($, spans, j
             var header_re = /(\w+)\s+(\w+)\s+("([^"]+)")?\s+\(\s*/;
                 var field_re = /([\w\[\]]+)\s+(\w+)\s*;\s*("([^"]+)")?\s*/g;
 
-                var headerMatch = header_re.exec(s);
-                if (headerMatch) {
-                    var as = {
-                        declType: headerMatch[1],
-                        name: headerMatch[2],
-                        comment: headerMatch[4],
+            var headerMatch = header_re.exec(s);
+            if (headerMatch) {
+                var as = {
+                    declType: headerMatch[1],
+                    name: headerMatch[2],
+                    comment: headerMatch[4],
 
-                        fields: []
-                    };
-
-                    s = s.substring(headerMatch[0]);
-                    for (var m = field_re.exec(s); m != null; m = field_re.exec(s)) {
-                        as.fields.push({type: m[1],
-                            name: m[2],
-                            comment: m[4]});
-                        }
-
-                        return callback(as);
-                    }
-                });
-            }
-
-            BigWig.prototype.getExtraIndices = function(callback) {
-                var thisB = this;
-                if (this.version < 4 || this.extHeaderOffset == 0 || this.type != 'bigbed') {
-                    return callback(null);
-                } else {
-                    this.data.slice(this.extHeaderOffset, 64).fetch(function(result) {
-                        if (!result) {
-                            return callback(null, "Couldn't fetch extension header");
-                        }
-
-                        var ba = new Uint8Array(result);
-                        var sa = new Int16Array(result);
-                        var la = new Int32Array(result);
-
-                        var extHeaderSize = sa[0];
-                        var extraIndexCount = sa[1];
-                        var extraIndexListOffset = bwg_readOffset(ba, 4);
-
-                        if (extraIndexCount == 0) {
-                            return callback(null);
-                        }
-
-                        // FIXME 20byte records only make sense for single-field indices.
-                        // Right now, these seem to be the only things around, but the format
-                        // is actually more general.
-                        thisB.data.slice(extraIndexListOffset, extraIndexCount * 20).fetch(function(eil) {
-                            if (!eil) {
-                                return callback(null, "Couldn't fetch index info");
-                            }
-
-                            var ba = new Uint8Array(eil);
-                            var sa = new Int16Array(eil);
-                            var la = new Int32Array(eil);
-
-                            var indices = [];
-                            for (var ii = 0; ii < extraIndexCount; ++ii) {
-                                var eiType = sa[ii*10];
-                                var eiFieldCount = sa[ii*10 + 1];
-                                var eiOffset = bwg_readOffset(ba, ii*20 + 4);
-                                var eiField = sa[ii*10 + 8]
-                                var index = new BBIExtraIndex(thisB, eiType, eiFieldCount, eiOffset, eiField);
-                                indices.push(index);
-                            }
-                            callback(indices);
-                        });
-                    });
-                }
-            }
-
-            function BBIExtraIndex(bbi, type, fieldCount, offset, field) {
-                this.bbi = bbi;
-                this.type = type;
-                this.fieldCount = fieldCount;
-                this.offset = offset;
-                this.field = field;
-            }
-
-            BBIExtraIndex.prototype.lookup = function(name, callback) {
-                var thisB = this;
-
-                this.bbi.data.slice(this.offset, 32).fetch(function(bpt) {
-                    var ba = new Uint8Array(bpt);
-                    var sa = new Int16Array(bpt);
-                    var la = new Int32Array(bpt);
-                    var bptMagic = la[0];
-                    var blockSize = la[1];
-                    var keySize = la[2];
-                    var valSize = la[3];
-                    var itemCount = bwg_readOffset(ba, 16);
-                    var rootNodeOffset = 32;
-
-                    function bptReadNode(nodeOffset) {
-                        thisB.bbi.data.slice(nodeOffset, 4 + (blockSize * (keySize + valSize))).fetch(function(node) {
-                            var ba = new Uint8Array(node);
-                            var sa = new Uint16Array(node);
-                            var la = new Uint32Array(node);
-
-                            var nodeType = ba[0];
-                            var cnt = sa[1];
-
-                            var offset = 4;
-                            if (nodeType == 0) {
-                                var lastChildOffset = null;
-                                for (var n = 0; n < cnt; ++n) {
-                                    var key = '';
-                                    for (var ki = 0; ki < keySize; ++ki) {
-                                        var charCode = ba[offset++];
-                                        if (charCode != 0) {
-                                            key += String.fromCharCode(charCode);
-                                        }
-                                    }
-
-                                    var childOffset = bwg_readOffset(ba, offset);
-                                    offset += 8;
-
-                                    if (name.localeCompare(key) < 0 && lastChildOffset) {
-                                        bptReadNode(lastChildOffset);
-                                        return;
-                                    }
-                                    lastChildOffset = childOffset;
-                                }
-                                bptReadNode(lastChildOffset);
-                            } else {
-                                for (var n = 0; n < cnt; ++n) {
-                                    var key = '';
-                                    for (var ki = 0; ki < keySize; ++ki) {
-                                        var charCode = ba[offset++];
-                                        if (charCode != 0) {
-                                            key += String.fromCharCode(charCode);
-                                        }
-                                    }
-
-                                    // Specific for EI case.
-                                    if (key == name) {
-                                        var start = bwg_readOffset(ba, offset);
-                                        var length = readInt(ba, offset + 8);
-
-                                        return thisB.bbi.getUnzoomedView().fetchFeatures(
-                                            function(chr, min, max, toks) {
-                                                if (toks && toks.length > thisB.field - 3)
-                                                return toks[thisB.field - 3] == name;
-                                            },
-                                            [{offset: start, size: length}],
-                                            callback);
-                                        }
-                                        offset += valSize;
-                                    }
-                                    return callback([]);
-                                }
-                            });
-                        }
-
-                        bptReadNode(thisB.offset + rootNodeOffset);
-                    });
-                }
-
-                return {
-                    makeBwg: makeBwg
+                    fields: []
                 };
+
+                s = s.substring(headerMatch[0]);
+                for (var m = field_re.exec(s); m != null; m = field_re.exec(s)) {
+                    as.fields.push({type: m[1],
+                        name: m[2],
+                        comment: m[4]});
+                    }
+
+                    return callback(as);
+                }
+        });
+    };
+
+    BigWig.prototype.getExtraIndices = function(callback) {
+        var thisB = this;
+        if (this.version < 4 || this.extHeaderOffset == 0 || this.type != 'bigbed') {
+            return callback(null);
+        } else {
+            this.data.slice(this.extHeaderOffset, 64).fetch(function(result) {
+                if (!result) {
+                    return callback(null, "Couldn't fetch extension header");
+                }
+
+                var ba = new Uint8Array(result);
+                var sa = new Int16Array(result);
+                var la = new Int32Array(result);
+
+                var extHeaderSize = sa[0];
+                var extraIndexCount = sa[1];
+                var extraIndexListOffset = bwg_readOffset(ba, 4);
+
+                if (extraIndexCount == 0) {
+                    return callback(null);
+                }
+
+                // FIXME 20byte records only make sense for single-field indices.
+                // Right now, these seem to be the only things around, but the format
+                // is actually more general.
+                thisB.data.slice(extraIndexListOffset, extraIndexCount * 20).fetch(function(eil) {
+                    if (!eil) {
+                        return callback(null, "Couldn't fetch index info");
+                    }
+
+                    var ba = new Uint8Array(eil);
+                    var sa = new Int16Array(eil);
+                    var la = new Int32Array(eil);
+
+                    var indices = [];
+                    for (var ii = 0; ii < extraIndexCount; ++ii) {
+                        var eiType = sa[ii*10];
+                        var eiFieldCount = sa[ii*10 + 1];
+                        var eiOffset = bwg_readOffset(ba, ii*20 + 4);
+                        var eiField = sa[ii*10 + 8]
+                        var index = new BBIExtraIndex(thisB, eiType, eiFieldCount, eiOffset, eiField);
+                        indices.push(index);
+                    }
+                    callback(indices);
+                });
             });
+        }
+    }
+
+    function BBIExtraIndex(bbi, type, fieldCount, offset, field) {
+        this.bbi = bbi;
+        this.type = type;
+        this.fieldCount = fieldCount;
+        this.offset = offset;
+        this.field = field;
+    }
+
+    BBIExtraIndex.prototype.lookup = function(name, callback) {
+        var thisB = this;
+
+        this.bbi.data.slice(this.offset, 32).fetch(function(bpt) {
+            var ba = new Uint8Array(bpt);
+            var sa = new Int16Array(bpt);
+            var la = new Int32Array(bpt);
+            var bptMagic = la[0];
+            var blockSize = la[1];
+            var keySize = la[2];
+            var valSize = la[3];
+            var itemCount = bwg_readOffset(ba, 16);
+            var rootNodeOffset = 32;
+
+            function bptReadNode(nodeOffset) {
+                thisB.bbi.data.slice(nodeOffset, 4 + (blockSize * (keySize + valSize))).fetch(function(node) {
+                    var ba = new Uint8Array(node);
+                    var sa = new Uint16Array(node);
+                    var la = new Uint32Array(node);
+
+                    var nodeType = ba[0];
+                    var cnt = sa[1];
+
+                    var offset = 4;
+                    if (nodeType == 0) {
+                        var lastChildOffset = null;
+                        for (var n = 0; n < cnt; ++n) {
+                            var key = '';
+                            for (var ki = 0; ki < keySize; ++ki) {
+                                var charCode = ba[offset++];
+                                if (charCode != 0) {
+                                    key += String.fromCharCode(charCode);
+                                }
+                            }
+
+                            var childOffset = bwg_readOffset(ba, offset);
+                            offset += 8;
+
+                            if (name.localeCompare(key) < 0 && lastChildOffset) {
+                                bptReadNode(lastChildOffset);
+                                return;
+                            }
+                            lastChildOffset = childOffset;
+                        }
+                        bptReadNode(lastChildOffset);
+                    } else {
+                        for (var n = 0; n < cnt; ++n) {
+                            var key = '';
+                            for (var ki = 0; ki < keySize; ++ki) {
+                                var charCode = ba[offset++];
+                                if (charCode != 0) {
+                                    key += String.fromCharCode(charCode);
+                                }
+                            }
+
+                            // Specific for EI case.
+                            if (key == name) {
+                                var start = bwg_readOffset(ba, offset);
+                                var length = readInt(ba, offset + 8);
+
+                                return thisB.bbi.getUnzoomedView().fetchFeatures(
+                                    function(chr, min, max, toks) {
+                                        if (toks && toks.length > thisB.field - 3)
+                                        return toks[thisB.field - 3] == name;
+                                    },
+                                    [{offset: start, size: length}],
+                                    callback);
+                                }
+                                offset += valSize;
+                            }
+                            return callback([]);
+                        }
+                    });
+                }
+
+                bptReadNode(thisB.offset + rootNodeOffset);
+        });
+    }
+
+    return {
+        makeBwg: makeBwg
+    };
+});
