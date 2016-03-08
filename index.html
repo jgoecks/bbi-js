@@ -6,96 +6,97 @@
   </head>
 
   <body>
-    <div id="vis"></div>
+      <div id="vis"></div>
   </body>
 
 <script type="text/javascript">
+    // Map from jquery.min to jquery.
     requirejs.config({
         baseUrl: '.',
         paths: {
-            // the left side is the module ID,
-            // the right side is the path to
-            // the jQuery file, relative to baseUrl.
-            // Also, the path should NOT include
-            // the '.js' file extension. This example
-            // is using jQuery 1.9.0 located at
-            // js/lib/jquery-1.9.0.js, relative to
-            // the HTML page.
             jquery: 'jquery.min'
         }
     });
 
     require(['bigwig', 'd3.min', 'vega'], function(bigwig, d3, vega) {
-        var bbURI = 'RMNISTHS_30xdownsample.bigwig'; //'./miapaca2_rnaseq.bigwig';
-        var cb, err;
-        $.when(bigwig.makeBwg(bbURI)).then(function(_bb, _err) {
-            bb = _bb;
-            err = _err;
-            cb = true;
+        /**
+         * Draw line chart for bigwig data.
+         */
+        var drawLineChart = function(data) {
+            // Convert features to x,y coordinates.
+            var max = 0, max_pos = 0;
+            converted_data = $.map(data, function(interval) {
+                if (interval.score > max) {
+                    max = interval.score;
+                    max_pos = interval;
+                }
+                if (interval.min === interval.max) {
+                    return {
+                        chrompos: interval.min,
+                        score: interval.score
+                    };
+                }
+                else {
+                    return [
+                        {
+                            chrompos: interval.min,
+                            score: interval.score
+                        },
+                        {
+                            chrompos: interval.max,
+                            score: interval.score
+                        }
+                    ];
+                }
+            });
 
-            $('body').append("<h3>Information about test.bigwig" + "</h3>");
+            $.getJSON("./line-chart.json", function(viz_spec) {
+                viz_spec.data = [
+                    {
+                        "name": "table",
+                        "values": converted_data
+                    }
+                ];
+                vega.parse.spec(viz_spec, function(chart) {
+                    chart({el:"#vis"}).update();
+                });
+            });
+        };
+
+        /**
+         * Benchmarking function that prints the number of data points returned at each zoom level.
+         */
+        var benchmarkZoomLevels = function(bb) {
+            $.each([0,1,2,3,4,5,6,7,8,9], function(zl) {
+                $.when(bb.getZoomedView(zl).readWigData(1, 0, 249250620)).then(function(data) {
+                    console.log("zoom level", zl, data.length);
+                });
+            });
+            $.when(bb.getUnzoomedView().readWigData(1, 0, 249250620)).then(function(data) {
+                console.log("unzoomed    ", data.length);
+            });
+        };
+
+        //
+        // Read file and display results.
+        //
+
+        var bbURI = './miapaca2_rnaseq.bigwig'; // './hg19_refgene.bb'; // 'RMNISTHS_30xdownsample.bigwig';
+        $.when(bigwig.makeBwg(bbURI)).then(function(bb, err) {
+            $('body').append("<h3>Information about " + bbURI + "</h3>");
             $('body').append("Version: " + bb.version + "<br>");
             $('body').append("Number of Zoom Levels: " + bb.numZoomLevels + "<br>");
-            // $.each([0,1,2,3,4,5,6,7,8,9], function(zl) {
-            //     bb.getZoomedView(zl).readWigData(1, 0, 249250620, function(data) {
-            //         console.log(zl, data.length);
-            //     });
-            // });
-            // bb.readWigData(1, 0, 249250620, function(data) {
-            //     console.log("unzoomed", data.length);
-            // });
 
-            // //bb.getZoomedView(5).readWigData(1, 0, 249250620, function(data) {
-            // //bb.getUnzoomedView().readWigData(1, 0, 249250620, function(data) {
-            bb.readWigData(1, 0, 249250620, function(data) {
-                console.log(data.length);
-                //console.log(data.length, data);
-                $('body').append("Length: "+data.length+"<br>");
+
+            $.when(bb.readWigData(1, 0, 249250620)).then(function(data) {
+                $('body').append("Length: "+ data.length +"<br>");
                 $('body').append("readWigData: ");
                 $('body').append($.map(data, function(obj){return JSON.stringify(obj.score)}).join(' '));
                 $('body').append("<br>");
 
-                // Convert features to x,y coordinates.
-                var max = 0, max_pos = 0;
-                converted_data = $.map(data, function(interval) {
-                    if (interval.score > max) {
-                        max = interval.score;
-                        max_pos = interval;
-                    }
-                    if (interval.min === interval.max) {
-                        //console.log(interval.min, interval.score);
-                        return {
-                            chrompos: interval.min,
-                            score: interval.score
-                        };
-                    }
-                    else {
-                        // console.log(interval.min, interval.score);
-                        // console.log(interval.max, interval.score);
-                        return [
-                            {
-                                chrompos: interval.min,
-                                score: interval.score
-                            },
-                            {
-                                chrompos: interval.max,
-                                score: interval.score
-                            }
-                        ];
-                    }
-                });
+                benchmarkZoomLevels(bb);
 
-                $.getJSON("./line-chart.json", function(viz_spec) {
-                    viz_spec.data = [
-                        {
-                            "name": "table",
-                            "values": converted_data
-                        }
-                    ];
-                    vega.parse.spec(viz_spec, function(chart) {
-                        chart({el:"#vis"}).update();
-                    });
-                });
+                drawLineChart(data);
             });
         });
     });
