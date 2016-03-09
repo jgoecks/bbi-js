@@ -24,12 +24,7 @@
          */
         var drawLineChart = function(data) {
             // Convert features to x,y coordinates.
-            var max = 0, max_pos = 0;
             converted_data = $.map(data, function(interval) {
-                if (interval.score > max) {
-                    max = interval.score;
-                    max_pos = interval;
-                }
                 if (interval.min === interval.max) {
                     return {
                         chrompos: interval.min,
@@ -62,6 +57,37 @@
                     vega.parse.spec(viz_spec, function(chart) {
                         chart({el:"#vis"}).update();
                     });
+                });
+            });
+        };
+
+        var drawIntensityChart = function(data) {
+            var converted_data = $.map(data, function(interval) {
+                if (interval.min === interval.max) {
+                    return {
+                        start: interval.min,
+                        end: interval.min + 1,
+                        score: interval.score
+                    };
+                }
+                else {
+                    return {
+                        start: interval.min,
+                        end: interval.max,
+                        score: interval.score
+                    };
+                }
+            });
+
+            $.getJSON("./chart_defs/intensity.json", function(viz_spec) {
+                viz_spec.data = [
+                    {
+                        "name": "table",
+                        "values": converted_data
+                    }
+                ];
+                vega.parse.spec(viz_spec, function(chart) {
+                    chart({el:"#vis", renderer: "svg"}).update();
                 });
             });
         };
@@ -99,6 +125,7 @@
 
                 //benchmarkZoomLevels(bb);
 
+                //drawIntensityChart(data);
                 drawLineChart(data);
             });
         });
