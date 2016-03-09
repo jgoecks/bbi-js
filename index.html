@@ -50,15 +50,18 @@
                 }
             });
 
-            $.getJSON("./line-chart.json", function(viz_spec) {
-                viz_spec.data = [
-                    {
-                        "name": "table",
-                        "values": converted_data
-                    }
-                ];
-                vega.parse.spec(viz_spec, function(chart) {
-                    chart({el:"#vis"}).update();
+            $.getJSON("./chart_defs/base.json", function(viz_spec) {
+                $.getJSON("./chart_defs/fill_marks.json", function(marks_spec) {
+                    viz_spec.marks = marks_spec;
+                    viz_spec.data = [
+                        {
+                            "name": "table",
+                            "values": converted_data
+                        }
+                    ];
+                    vega.parse.spec(viz_spec, function(chart) {
+                        chart({el:"#vis"}).update();
+                    });
                 });
             });
         };
@@ -94,7 +97,7 @@
                 $('body').append($.map(data, function(obj){return JSON.stringify(obj.score)}).join(' '));
                 $('body').append("<br>");
 
-                benchmarkZoomLevels(bb);
+                //benchmarkZoomLevels(bb);
 
                 drawLineChart(data);
             });

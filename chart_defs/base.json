@@ -33,20 +33,5 @@
   "axes": [
     { "type": "x", "scale": "xscale", "format": "s", "ticks": 5 },
     { "type": "y", "scale": "yscale" }
-  ],
-
-  "marks": [
-    {
-      "type": "line",
-      "from": {"data":"table"},
-      "properties": {
-          "update": {
-               "x": {"scale": "xscale","field": "chrompos"},
-               "y": {"scale": "yscale","field": "score"},
-               "strokeWidth": {"value": 2},
-               "stroke": {"value": "#4682b4"}
-           }
-       }
-    }
   ]
 }

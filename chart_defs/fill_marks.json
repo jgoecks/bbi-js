@@ -1,0 +1,14 @@
+[
+    {
+      "type": "area",
+      "from": {"data": "table"},
+      "properties": {
+          "update": {
+               "x": {"scale": "xscale", "field": "chrompos"},
+               "y": {"scale": "yscale", "field": "score"},
+               "y2": {"scale": "yscale", "value": "0"},
+               "fill": {"value": "#4682b4"}
+           }
+       }
+    }
+]
