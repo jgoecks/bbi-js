@@ -1,14 +1,12 @@
-[
-  {
+{
     "type": "line",
-    "from": {"data": "table"},
+    "from": { "data": "" },
     "properties": {
         "update": {
-             "x": {"scale": "xscale", "field": "chrompos"},
-             "y": {"scale": "yscale", "field": "score"},
-             "strokeWidth": {"value": 1},
-             "stroke": {"value": "#4682b4"}
-         }
-     }
-  }
-]
+            "x": {"scale": "xscale", "field": "chrompos"},
+            "y": {"scale": "yscale", "field": "score"},
+            "strokeWidth": {"value": 1},
+            "stroke": {"value": "#4682b4"}
+        }
+    }
+}

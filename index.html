@@ -18,49 +18,10 @@
         }
     });
 
-    require(['bigwig', 'd3.min', 'vega'], function(bigwig, d3, vega) {
+    require(['bigwig', 'd3.min', 'vega', 'numerical'], function(bigwig, d3, vega, numerical) {
         /**
          * Draw line chart for bigwig data.
          */
-        var drawLineChart = function(data) {
-            // Convert features to x,y coordinates.
-            converted_data = $.map(data, function(interval) {
-                if (interval.min === interval.max) {
-                    return {
-                        chrompos: interval.min,
-                        score: interval.score
-                    };
-                }
-                else {
-                    return [
-                        {
-                            chrompos: interval.min,
-                            score: interval.score
-                        },
-                        {
-                            chrompos: interval.max,
-                            score: interval.score
-                        }
-                    ];
-                }
-            });
-
-            $.getJSON("./chart_defs/base.json", function(viz_spec) {
-                $.getJSON("./chart_defs/fill_marks.json", function(marks_spec) {
-                    viz_spec.marks = marks_spec;
-                    viz_spec.data = [
-                        {
-                            "name": "table",
-                            "values": converted_data
-                        }
-                    ];
-                    vega.parse.spec(viz_spec, function(chart) {
-                        chart({el:"#vis"}).update();
-                    });
-                });
-            });
-        };
-
         var drawIntensityChart = function(data) {
             var converted_data = $.map(data, function(interval) {
                 if (interval.min === interval.max) {
@@ -110,24 +71,51 @@
         // Read file and display results.
         //
 
-        var bbURI = './miapaca2_rnaseq.bigwig'; // './hg19_refgene.bb'; // 'RMNISTHS_30xdownsample.bigwig';
-        $.when(bigwig.makeBwg(bbURI)).then(function(bb, err) {
-            $('body').append("<h3>Information about " + bbURI + "</h3>");
-            $('body').append("Version: " + bb.version + "<br>");
-            $('body').append("Number of Zoom Levels: " + bb.numZoomLevels + "<br>");
+        var readData = function(url, chrom, start, end) {
+            var promise = new $.Deferred();
+            $.when(bigwig.makeBwg(url)).then(function(bb, err) {
+                $.when(bb.readWigData(chrom, start, end)).then(function(data) {
+                    $('body').append("<h3>Information about " + url + "</h3>");
+                    $('body').append("Version: " + bb.version + "<br>");
+                    $('body').append("Number of Zoom Levels: " + bb.numZoomLevels + "<br>");
 
+                    $('body').append("Length: "+ data.length +"<br>");
+                    $('body').append("readWigData:<br>");
+                    $('body').append($.map(data, function(interval){ return interval.min + " " + interval.max + " " + Math.round(interval.score); }).join('<br>'));
+                    $('body').append("<br>");
+                    //benchmarkZoomLevels(bb);
 
-            $.when(bb.readWigData(1, 0, 249250620)).then(function(data) {
-                $('body').append("Length: "+ data.length +"<br>");
-                $('body').append("readWigData: ");
-                $('body').append($.map(data, function(obj){return JSON.stringify(obj.score)}).join(' '));
-                $('body').append("<br>");
-
-                //benchmarkZoomLevels(bb);
-
-                //drawIntensityChart(data);
-                drawLineChart(data);
+                    promise.resolve(data);
+                });
             });
+
+            return promise;
+        };
+
+        var bbURI = [
+            "chr19.normal.bw",
+            "chr19.tumor.bw"
+        ]; //"RMNISTHS_30xdownsample.bigwig"; // 'hg19.100way.phyloP100way.bw'; //'./miapaca2_rnaseq.bigwig'; // './hg19_refgene.bb'; // 'RMNISTHS_30xdownsample.bigwig';
+        $.when(readData(bbURI[0], 19, 0, 30000000), readData(bbURI[1], 19, 0, 30000000)).then(function(data1, data2) {
+            numerical.drawLineChart(
+                // Datasets.
+                [
+                {
+                    name: "normal",
+                    data: data1,
+                    color: 'blue'
+                },
+                {
+                    name: "tumor",
+                    data: data2,
+                    color: 'red'
+                }
+                ],
+                // Visualization-level properties.
+                {
+                    ydomain: [0, 100]
+                }
+            );
         });
     });
 </script>

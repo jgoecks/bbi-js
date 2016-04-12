@@ -1,6 +1,6 @@
 {
   "width": 1000,
-  "height": 50,
+  "height": 500,
   "padding": {"top": 10, "left": 30, "bottom": 20, "right": 10},
 
   "data": [],
@@ -25,13 +25,14 @@
 
   "scales": [
     { "name": "xscale", "range": "width",
-      "domain": {"data": "table", "field": "chrompos"} },
+      "domain": {"data": "normal", "field": "chrompos"} },
     { "name": "yscale", "range": "height", "nice": true,
-      "domain": [0, 150] }
+        "domain": {"data": "normal", "field": "score"}}
   ],
 
   "axes": [
     { "type": "x", "scale": "xscale", "format": "s", "ticks": 5 },
     { "type": "y", "scale": "yscale" }
-  ]
+  ],
+  "marks": []
 }
