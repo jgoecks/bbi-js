@@ -1,7 +1,7 @@
 /**
  * Functions to visualize numerical genomic data.
  */
-define(["jquery", "vega"], function($, vega) {
+define(["jquery", "d3.min", "vega"], function($, d3, vega) {
 
     /**
      * Draw a line chart with one or more data sources.
@@ -19,6 +19,7 @@ define(["jquery", "vega"], function($, vega) {
                 }
 
                 // Draw each dataset.
+                var yMax = 0;
                 for (var i = 0; i < dataList.length; i++) {
                     var dataset = dataList[i],
                         name = dataset.name,
@@ -49,6 +50,13 @@ define(["jquery", "vega"], function($, vega) {
                         }
                     });
 
+
+                    // Compute 90% quantile and set y max to that if its larger.
+                    dataSetMax = d3.quantile($.map(data, function(d) { return d.score; }), 0.95);
+                    if (dataSetMax > yMax) {
+                        yMax = dataSetMax;
+                    }
+
                     dataMarksSpec.from.data = name;
                     dataMarksSpec.properties.update.stroke.value = color;
                     vizSpec.marks.push(dataMarksSpec);
@@ -58,6 +66,8 @@ define(["jquery", "vega"], function($, vega) {
                     });
                 }
 
+                // Set yMax, multiplying by 1.5 to put maximum in middle of chart.
+                vizSpec.scales[1].domain = [0, yMax * 1.5];
                 vega.parse.spec(vizSpec, function(chart) {
                     chart({el:"#vis"}).update();
                 });

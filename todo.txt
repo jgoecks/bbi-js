@@ -1,4 +1,3 @@
-Set yscale based on sum of squares
 Create small test file for experimentation, e.g. chr19 of miapaca2_rnaseq
 Add blocks data to bigbed results
 Use real interval library: https://www.npmjs.com/package/interval-arithmetic ?
