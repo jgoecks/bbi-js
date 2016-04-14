@@ -20,40 +20,6 @@
 
     require(['bigwig', 'd3.min', 'vega', 'numerical'], function(bigwig, d3, vega, numerical) {
         /**
-         * Draw line chart for bigwig data.
-         */
-        var drawIntensityChart = function(data) {
-            var converted_data = $.map(data, function(interval) {
-                if (interval.min === interval.max) {
-                    return {
-                        start: interval.min,
-                        end: interval.min + 1,
-                        score: interval.score
-                    };
-                }
-                else {
-                    return {
-                        start: interval.min,
-                        end: interval.max,
-                        score: interval.score
-                    };
-                }
-            });
-
-            $.getJSON("./chart_defs/intensity.json", function(viz_spec) {
-                viz_spec.data = [
-                    {
-                        "name": "table",
-                        "values": converted_data
-                    }
-                ];
-                vega.parse.spec(viz_spec, function(chart) {
-                    chart({el:"#vis", renderer: "svg"}).update();
-                });
-            });
-        };
-
-        /**
          * Benchmarking function that prints the number of data points returned at each zoom level.
          */
         var benchmarkZoomLevels = function(bb) {
@@ -93,46 +59,45 @@
         };
 
         // Datasets to visualize.
-        var bbURI = [
-                "chr19.normal.bw",
-                "chr19.tumor.bw",
-                "miapaca2_rnaseq.bigwig",
+        var datasets = [
+                {
+                    name: "normal",
+                    uri: "chr19.normal.bw",
+                    color: "blue"
+                },
+                {
+                    name: "tumor",
+                    uri: "chr19.tumor.bw",
+                    color: "red"
+                },
+                {
+                    name: "miapaca2_rnaseq",
+                    uri: "miapaca2_rnaseq.bigwig",
+                    color: "green"
+                },
+                // {
+                //     name: "refgene",
+                //     uri: "hg19_refgene.bb",
+                //     color: "purple"
+                // }
                 // Only data for chr1?
                 //"RMNISTHS_30xdownsample.bigwig",
                 // Only data for chr1:
                 //'hg19_100vertcons.bigwig',
-                'hg19_refgene.bb'
             ],
-            dataPromises = $.map(bbURI, function(uri) {
-                return readData(uri, 19, 0, 30000000);
+            dataPromises = $.map(datasets, function(dataset) {
+                var promise = readData(dataset.uri, 19, 0, 30000000);
+                $.when(promise).then(function(data) {
+                    dataset.data = data;
+                });
+
+                return promise;
             });
         $.when.apply($, dataPromises).then(function() {
-            var data = arguments;
-            numerical.drawLineChart(
-                // Datasets.
-                [
-                    {
-                        name: "normal",
-                        data: data[0],
-                        color: "blue"
-                    },
-                    {
-                        name: "tumor",
-                        data: data[1],
-                        color: "red"
-                    },
-                    {
-                        name: "miapaca2_rnaseq",
-                        data: data[2],
-                        color: "green"
-                    },
-                    {
-                        name: "GiaB",
-                        data: data[3],
-                        color: "purple"
-                    },
-                ]
-            );
+            numerical.drawLineChart(datasets,
+            {
+                fill: false
+            });
         });
     });
 </script>

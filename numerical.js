@@ -9,9 +9,13 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
     var drawLineChart = function(dataList, options) {
         options = options || {};
 
+        var fill = options.fill === true,
+            marksTemplate = (fill ? "./chart_defs/fill_marks.json" : "./chart_defs/line_marks.json");
+
+
         // Load chart definition, update, and display.
         $.getJSON("./chart_defs/base.json", function(vizSpec) {
-            $.getJSON("./chart_defs/line_marks.json", function(marksSpec) {
+            $.getJSON(marksTemplate, function(marksSpec) {
 
                 // Set chart attributes from options.
                 if (options.ydomain) {
@@ -58,7 +62,12 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
                     }
 
                     dataMarksSpec.from.data = name;
-                    dataMarksSpec.properties.update.stroke.value = color;
+                    if (fill) {
+                        dataMarksSpec.properties.update.fill.value = color;
+                    }
+                    else {
+                        dataMarksSpec.properties.update.stroke.value = color;
+                    }
                     vizSpec.marks.push(dataMarksSpec);
                     vizSpec.data.push({
                         "name": name,
@@ -77,7 +86,42 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
         });
     };
 
+    /**
+     * Draw line chart for bigwig data.
+     */
+    var drawIntensityChart = function(data) {
+        var converted_data = $.map(data, function(interval) {
+            if (interval.min === interval.max) {
+                return {
+                    start: interval.min,
+                    end: interval.min + 1,
+                    score: interval.score
+                };
+            }
+            else {
+                return {
+                    start: interval.min,
+                    end: interval.max,
+                    score: interval.score
+                };
+            }
+        });
+
+        $.getJSON("./chart_defs/intensity.json", function(viz_spec) {
+            viz_spec.data = [
+                {
+                    "name": "table",
+                    "values": converted_data
+                }
+            ];
+            vega.parse.spec(viz_spec, function(chart) {
+                chart({el:"#vis", renderer: "svg"}).update();
+            });
+        });
+    };
+
     return {
-        drawLineChart: drawLineChart
+        drawLineChart: drawLineChart,
+        drawIntensityChart: drawIntensityChart
     };
 });
