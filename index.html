@@ -92,24 +92,45 @@
             return promise;
         };
 
+        // Datasets to visualize.
         var bbURI = [
-            "chr19.normal.bw",
-            "chr19.tumor.bw"
-        ]; //"RMNISTHS_30xdownsample.bigwig"; // 'hg19.100way.phyloP100way.bw'; //'./miapaca2_rnaseq.bigwig'; // './hg19_refgene.bb'; // 'RMNISTHS_30xdownsample.bigwig';
-        $.when(readData(bbURI[0], 19, 0, 30000000), readData(bbURI[1], 19, 0, 30000000)).then(function(data1, data2) {
+                "chr19.normal.bw",
+                "chr19.tumor.bw",
+                "miapaca2_rnaseq.bigwig",
+                // Only data for chr1?
+                //"RMNISTHS_30xdownsample.bigwig",
+                // Only data for chr1:
+                //'hg19_100vertcons.bigwig',
+                'hg19_refgene.bb'
+            ],
+            dataPromises = $.map(bbURI, function(uri) {
+                return readData(uri, 19, 0, 30000000);
+            });
+        $.when.apply($, dataPromises).then(function() {
+            var data = arguments;
             numerical.drawLineChart(
                 // Datasets.
                 [
                     {
                         name: "normal",
-                        data: data1,
-                        color: 'blue'
+                        data: data[0],
+                        color: "blue"
                     },
                     {
                         name: "tumor",
-                        data: data2,
-                        color: 'red'
-                    }
+                        data: data[1],
+                        color: "red"
+                    },
+                    {
+                        name: "miapaca2_rnaseq",
+                        data: data[2],
+                        color: "green"
+                    },
+                    {
+                        name: "GiaB",
+                        data: data[3],
+                        color: "purple"
+                    },
                 ]
             );
         });

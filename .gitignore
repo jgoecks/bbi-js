@@ -1,3 +1,5 @@
+# Ignore all data files.
 *.wig
 *.bw
 *.bigwig
+*.bb
