@@ -9,8 +9,29 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
     var drawLineChart = function(dataList, options) {
         options = options || {};
 
-        var fill = options.fill === true,
-            marksTemplate = (fill ? "./chart_defs/fill_marks.json" : "./chart_defs/line_marks.json");
+        // Set up chart-specific operations.
+        var marksTemplate = "",
+            marksFunc,
+            dataConversionFunc;
+        if (options.type === "line") {
+            marksTemplate = "./chart_defs/line_marks.json";
+            marksFunc = function(marksSpec, color) {
+                marksSpec.properties.update.stroke.value = color;
+            };
+            dataConversionFunc = convertForLineOrFill;
+        }
+        else if (options.type === "fill") {
+            marksTemplate = "./chart_defs/fill_marks.json";
+            marksFunc = function(marksSpec, color) {
+                marksSpec.properties.update.fill.value = color;
+            };
+            dataConversionFunc = convertForLineOrFill;
+        }
+        else if (options.type === "intensity") {
+            marksTemplate = "./chart_defs/intensity_marks.json";
+            marksFunc = function() {};
+            dataConversionFunc = convertForIntensity;
+        }
 
 
         // Load chart definition, update, and display.
@@ -33,27 +54,7 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
 
                     // Convert features to datapoints. Each data point may be for a single
                     // base or multiple bases.
-                    var converted_data = $.map(data, function(interval) {
-                        if (interval.min === interval.max) {
-                            return {
-                                chrompos: interval.min,
-                                score: interval.score
-                            };
-                        }
-                        else {
-                            return [
-                                {
-                                    chrompos: interval.min,
-                                    score: interval.score
-                                },
-                                {
-                                    chrompos: interval.max,
-                                    score: interval.score
-                                }
-                            ];
-                        }
-                    });
-
+                    converted_data = dataConversionFunc(data);
 
                     // Compute 90% quantile and set y max to that if its larger.
                     dataSetMax = d3.quantile($.map(data, function(d) { return d.score; }), 0.95);
@@ -62,12 +63,7 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
                     }
 
                     dataMarksSpec.from.data = name;
-                    if (fill) {
-                        dataMarksSpec.properties.update.fill.value = color;
-                    }
-                    else {
-                        dataMarksSpec.properties.update.stroke.value = color;
-                    }
+                    marksFunc(dataMarksSpec, color);
                     vizSpec.marks.push(dataMarksSpec);
                     vizSpec.data.push({
                         "name": name,
@@ -87,41 +83,54 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
     };
 
     /**
-     * Draw line chart for bigwig data.
+     * Convert data for line/fill display.
      */
-    var drawIntensityChart = function(data) {
-        var converted_data = $.map(data, function(interval) {
+    var convertForLineOrFill = function(data) {
+        return $.map(data, function(interval) {
             if (interval.min === interval.max) {
                 return {
-                    start: interval.min,
-                    end: interval.min + 1,
+                    chrompos: interval.min,
+                    score: interval.score
+                };
+            }
+            else {
+                return [
+                    {
+                        chrompos: interval.min,
+                        score: interval.score
+                    },
+                    {
+                        chrompos: interval.max,
+                        score: interval.score
+                    }
+                ];
+            }
+        });
+    };
+
+    /**
+     * Convert bigwig data for intensity display.
+     */
+    var convertForIntensity = function(data) {
+        return $.map(data, function(interval) {
+            if (interval.min === interval.max) {
+                return {
+                    chrompos: interval.min,
+                    span: 1,
                     score: interval.score
                 };
             }
             else {
                 return {
-                    start: interval.min,
-                    end: interval.max,
+                    chrompos: interval.min,
+                    span: interval.max - interval.min,
                     score: interval.score
                 };
             }
         });
-
-        $.getJSON("./chart_defs/intensity.json", function(viz_spec) {
-            viz_spec.data = [
-                {
-                    "name": "table",
-                    "values": converted_data
-                }
-            ];
-            vega.parse.spec(viz_spec, function(chart) {
-                chart({el:"#vis", renderer: "svg"}).update();
-            });
-        });
     };
 
     return {
-        drawLineChart: drawLineChart,
-        drawIntensityChart: drawIntensityChart
+        drawLineChart: drawLineChart
     };
 });

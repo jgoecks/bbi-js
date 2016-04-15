@@ -58,23 +58,23 @@
             return promise;
         };
 
-        // Datasets to visualize.
+        // Read data.
         var datasets = [
                 {
                     name: "normal",
                     uri: "chr19.normal.bw",
                     color: "blue"
                 },
-                {
-                    name: "tumor",
-                    uri: "chr19.tumor.bw",
-                    color: "red"
-                },
-                {
-                    name: "miapaca2_rnaseq",
-                    uri: "miapaca2_rnaseq.bigwig",
-                    color: "green"
-                },
+                // {
+                //     name: "tumor",
+                //     uri: "chr19.tumor.bw",
+                //     color: "red"
+                // },
+                // {
+                //     name: "miapaca2_rnaseq",
+                //     uri: "miapaca2_rnaseq.bigwig",
+                //     color: "green"
+                // },
                 // {
                 //     name: "refgene",
                 //     uri: "hg19_refgene.bb",
@@ -93,10 +93,12 @@
 
                 return promise;
             });
+
+        // When data read, draw chart.
         $.when.apply($, dataPromises).then(function() {
             numerical.drawLineChart(datasets,
             {
-                fill: false
+                type: "intensity"
             });
         });
     });

@@ -1,38 +1,41 @@
 {
-  "width": 1000,
-  "height": 100,
-  "padding": {"top": 10, "left": 30, "bottom": 20, "right": 10},
+    "width": 1000,
+    "height": 100,
+    "padding": {"top": 10, "left": 30, "bottom": 20, "right": 10},
 
-  "data": [],
+    "data": [],
 
-  "signals": [
-    {
-      "name": "tooltip",
-      "init": {},
-      "streams": [
-        {"type": "rect:mouseover", "expr": "datum"},
-        {"type": "rect:mouseout", "expr": "{}"}
-      ]
-    }
-  ],
+    "signals": [
+        {
+            "name": "tooltip",
+            "init": {},
+            "streams": [
+                {"type": "rect:mouseover", "expr": "datum"},
+                {"type": "rect:mouseout", "expr": "{}"}
+            ]
+        }
+    ],
 
-  "predicates": [
-    {
-      "name": "tooltip", "type": "==",
-      "operands": [{"signal": "tooltip._id"}, {"arg": "id"}]
-    }
-  ],
+    "predicates": [
+        {
+            "name": "tooltip", "type": "==",
+            "operands": [{"signal": "tooltip._id"}, {"arg": "id"}]
+        }
+    ],
 
-  "scales": [
-    { "name": "xscale", "range": "width",
-      "domain": {"data": "normal", "field": "chrompos"} },
-    { "name": "yscale", "range": "height", "nice": true,
-        "domain": {"data": "normal", "field": "score"}}
-  ],
+    "scales": [
+        { "name": "xscale", "range": "width",
+            "domain": {"data": "normal", "field": "chrompos"} },
+        { "name": "yscale", "range": "height", "nice": true,
+            "domain": {"data": "normal", "field": "score"}},
+        { "name": "c", "type": "linear",
+            "domain": {"data": "normal", "field": "score"},
+            "range": ["white", "black"] }
+    ],
 
-  "axes": [
-    { "type": "x", "scale": "xscale", "format": "s", "ticks": 5 },
-    { "type": "y", "scale": "yscale" }
-  ],
-  "marks": []
+    "axes": [
+        { "type": "x", "scale": "xscale", "format": "s", "ticks": 5 },
+        { "type": "y", "scale": "yscale" }
+    ],
+    "marks": []
 }
