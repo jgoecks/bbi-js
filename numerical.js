@@ -2,6 +2,13 @@
  * Functions to visualize numerical genomic data.
  */
 define(["jquery", "d3.min", "vega"], function($, d3, vega) {
+    /**
+     * Round to one decimal place.
+     */
+    var roundOneDecimal = function(number) {
+        return Math.round(number * 10) / 10;
+    };
+
 
     /**
      * Convert data for line/fill display.
@@ -33,21 +40,23 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
      * Convert bigwig data for intensity display.
      */
     var convertForIntensity = function(data) {
-        return $.map(data, function(interval) {
-            if (interval.min === interval.max) {
-                return {
-                    chrompos: interval.min,
-                    span: 1,
-                    score: interval.score
-                };
+        var formatter = d3.format(".2s");
+        return $.each(data, function(i, interval) {
+            // Use chrompos for now, but could use min in the future.
+            interval.chrompos = interval.min;
+
+            // Round score to one decimal place.
+            interval.score = roundOneDecimal(interval.score);
+
+            // Add formatted label.
+            interval.label = formatter(roundOneDecimal(interval.min + (interval.max - interval.min)/2));
+
+            // Add span for length of mark.
+            var span = 1;
+            if (interval.min !== interval.max) {
+                span = interval.max - interval.min;
             }
-            else {
-                return {
-                    chrompos: interval.min,
-                    span: interval.max - interval.min,
-                    score: interval.score
-                };
-            }
+            interval.span = span;
         });
     };
 
@@ -120,7 +129,7 @@ define(["jquery", "d3.min", "vega"], function($, d3, vega) {
 
                     dataMarksSpec.from.data = name;
                     chartAttrs.fillSpec(dataMarksSpec, dataset);
-                    vizSpec.marks.push(dataMarksSpec);
+                    vizSpec.marks.unshift(dataMarksSpec);
                     vizSpec.data.push({
                         "name": name,
                         "values": converted_data
