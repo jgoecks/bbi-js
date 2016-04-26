@@ -1,0 +1,84 @@
+{
+
+    "width": 1000,
+    "height": 100,
+    "padding": {"top": 10, "left": 30, "bottom": 20, "right": 10},
+
+    "data": [],
+
+    "scales": [
+        { "name": "xscale", "range": "width",
+            "domain": {"data": "normal", "field": "chrompos"} },
+        { "name": "yscale", "range": "height", "nice": true,
+            "domain": {"data": "normal", "field": "score"}},
+        { "name": "c", "type": "linear",
+            "domain": {"data": "normal", "field": "score"},
+            "range": ["white", "black"] }
+    ],
+
+    "axes": [
+        { "type": "x", "scale": "xscale", "format": "s", "ticks": 5 },
+        { "type": "y", "scale": "yscale" }
+    ],
+
+    "signals": [
+        {
+            "name": "tooltip",
+            "init": {},
+            "streams": [
+                {"type": "rect:mouseover", "expr": "datum"},
+                {"type": "rect:mouseout", "expr": "{}"}
+            ]
+        }
+    ],
+
+    "predicates": [
+        {
+            "name": "tooltip", "type": "==",
+            "operands": [{"signal": "tooltip._id"}, {"arg": "id"}]
+        }
+    ],
+
+    "marks": [
+        {
+            "type": "rect",
+            "from": { "data": "" },
+            "properties": {
+                "update": {
+                    "x": { "scale": "xscale", "field": "chrompos" },
+                    "width": { "scale": "xscale", "field": "span" },
+                    "y": { "scale": "yscale", "field": "score" },
+                    "y2": { "scale": "yscale", "value": "0" },
+                    "fill": { "value": "" }
+                }
+            }
+        },
+        {
+            "type": "text",
+            "properties": {
+                "enter": {
+                    "align": {"value": "center"},
+                    "fill": {"value": "#333"}
+                },
+                "update": {
+                    "x": {"scale": "xscale", "signal": "tooltip.chrompos"},
+                    "y": {"scale": "yscale", "value": "height"},
+                    "text": {
+                        "template": "{{tooltip.chrompos|number:'0.3s'}}: {{tooltip.score|number:'0.3s'}}"
+                    },
+                    "fillOpacity": {
+                        "rule": [
+                            {
+                                "predicate": {"name": "tooltip", "id": {"value": null}},
+                                "value": 0
+                            },
+                            {
+                                "value": 1
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

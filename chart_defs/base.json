@@ -3,26 +3,6 @@
     "height": 100,
     "padding": {"top": 10, "left": 30, "bottom": 20, "right": 10},
 
-    "data": [],
-
-    "signals": [
-        {
-            "name": "tooltip",
-            "init": {},
-            "streams": [
-                {"type": "rect:mouseover", "expr": "datum"},
-                {"type": "rect:mouseout", "expr": "{}"}
-            ]
-        }
-    ],
-
-    "predicates": [
-        {
-            "name": "tooltip", "type": "==",
-            "operands": [{"signal": "tooltip._id"}, {"arg": "id"}]
-        }
-    ],
-
     "scales": [
         { "name": "xscale", "range": "width",
             "domain": {"data": "normal", "field": "chrompos"} },
@@ -39,6 +19,15 @@
     ],
     "marks": [
         {
+            "from": {
+                "data": "normal",
+                "transform": [
+                    {
+                        "type": "filter",
+                        "test": "datum.chrompos >= xmouse && datum.chrompos <= xmouse_plus"
+                    }
+                ]
+            },
             "type": "text",
             "properties": {
                 "enter": {
@@ -46,17 +35,11 @@
                     "fill": {"value": "#333"}
                 },
                 "update": {
-                    "x": {"scale": "xscale", "signal": "tooltip.chrompos"},
+                    "x": {"scale": "xscale", "field": "chrompos"},
                     "y": {"scale": "yscale", "value": "height"},
                     "text": {
-                        "template": "{{tooltip.label}}: {{tooltip.score}}"
-                    },
-                    "fillOpacity": [
-                        { "test": "!tooltip._id",
-                            "value": 0
-                        },
-                        {"value": 1}
-                    ]
+                        "template": "{{datum.chrompos|number:'.3s'}}: {{datum.score|number:'.3s'}}"
+                    }
                 }
             }
         }

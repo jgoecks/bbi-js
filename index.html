@@ -96,7 +96,7 @@
 
         // When data read, draw chart.
         $.when.apply($, dataPromises).then(function() {
-            numerical.drawLineChart(datasets,
+            numerical.drawChart(datasets,
             {
                 type: "intensity"
             });

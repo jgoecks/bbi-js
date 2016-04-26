@@ -1,6 +1,8 @@
 Add blocks data to bigbed results
 Use real interval library: https://www.npmjs.com/package/interval-arithmetic ?
 show data on mouseover
+    use inversion + filtering for line/fill plot
+    use object-oriented approach for loading and modifying templates
 genome-wide view of data
 genomic labels
 write twobit JS reader
